@@ -2,115 +2,120 @@ currentDate <- Sys.Date()
 wd <- setwd("D:/Shared/BackedUp/Caitlin/GlobalCnxns") 
 
 ## Slim-down PA database, per criteria:
-# 1) Cats I-IV, I-V, IVI
-# 2) Only terrestrial
-# 3) Only pixels w/ 75% more in PA (requires rasterizing)
-# 4) Matches res/projection of Sean's template
+# 1) Cats IVI
+# 2) Only pixels w/ 75% more in PA
+# 3) Assign unique ID to pixels for each PA (crosswalk to PA name)
+# 4) Don't exclude water, but prioritize terrestrial PAs for ID if overlap
+# 5) Matches res/projection of Solomon's ecoreg template
 
-# Also removing proposed PAs, those <1km, anything with clim = 0.
+## Also removing:
+# 1) Proposed PAs
+# 2) PAs < 1km to speed processing
+# 3) Anything not in Solomon's ecoreg template (will nix marine)
 
-##########################################################
+
+
+
+
+
+
+#### LOAD ######################################################
+
 ## Load spatial data
 # Global database of PAs
-PA.all <- st_read(dsn = paste0(data.dir,"/WDPA_Apr2019-shapefile/WDPA_Apr2019-shapefile-polygons.shp"))
+PA.all <- st_read(dsn = paste0(data.dir,"/WDPA_Dec2019-shapefile/WDPA_Dec2019-shapefile-polygons.shp"))
 PA.slim <- PA.all %>%
-  dplyr::select(NAME, DESIG_ENG, IUCN_CAT, MARINE, STATUS, REP_M_AREA, REP_AREA, GIS_M_AREA, GIS_AREA) 
+  dplyr::select(NAME, DESIG_ENG, IUCN_CAT, MARINE, STATUS, REP_M_AREA, REP_AREA, GIS_M_AREA, GIS_AREA, ISO3) 
+rm(PA.all)
+
+# ecoregion template
+ecoreg.r <- raster(paste0(data.dir,"ecoregions/ecoregion raster.tif"))
+plot(ecoreg.r)
 
 
-##########################################################
-## Keep different cats
-keepsIIV = c("Ia", "Ib", "II", "III", "IV")
-keepsIV = c("Ia", "Ib", "II", "III", "IV", "V")
+
+
+
+
+
+#### CRITERIA ######################################################
+
+## Retain PAs per criteria above.
+# Dinerstein excludes proposed and status = not reported.
+# But Dinerstein retains no assigned b/c lots community reserves.
+# Create two versions: 1 w/ and 1 w/o not assigned
+
+
+
+## Keep proposed
+PA.slim <- PA.slim %>%
+  filter(! STATUS == "Proposed")
+
+
+
+## Create 2 versions
+# Make look-up
 keepsIVI = c("Ia", "Ib", "II", "III", "IV", "V", "VI")
-PA.IIV <- PA.slim[PA.slim$IUCN_CAT %in% keepsIIV, ]
-PA.IV <- PA.slim[PA.slim$IUCN_CAT %in% keepsIV, ]
-PA.IVI <- PA.slim[PA.slim$IUCN_CAT %in% keepsIVI, ]
+keepsIVInoass = c("Ia", "Ib", "II", "III", "IV", "V", "VI", "Not Assigned")
 
-## Remove 100% marine and any proposed
-PA.IIV.terr <- PA.IIV %>%
-  filter(! MARINE == 2) %>%
-  filter(! STATUS == "Proposed")
-PA.IV.terr <- PA.IV %>%
-  filter(! MARINE == 2) %>%
-  filter(! STATUS == "Proposed")
-PA.IVI.terr <- PA.IVI %>%
-  filter(! MARINE == 2) %>%
-  filter(! STATUS == "Proposed")
+# Retain per look-ups
+PA.IVI <- PA.slim[PA.slim$IUCN_CAT %in% keepsIVI, ] #154291
+sum(PA.IVI$GIS_AREA) #35354003
+PA.IVInoass <- PA.slim[PA.slim$IUCN_CAT %in% keepsIVInoass, ] #162131
+sum(PA.IVInoass$GIS_AREA) #36129306
+sum(PA.IVInoass$GIS_AREA) - sum(PA.IVI$GIS_AREA) # gives 775302 more sqkm
 
 
-## Remove anything LTE 1 km2 (reported; not calc'ed by UNEP)
-PA.IIV.terr.1km <- PA.IIV.terr %>%
-  filter(REP_AREA >= 1) # 37180 remain
-PA.IV.terr.1km <- PA.IV.terr %>%
-  filter(REP_AREA >= 1) # 54615 remain
-PA.IVI.terr.1km <- PA.IVI.terr %>%
-  filter(REP_AREA >= 1) # 58146 remain
 
+## Remove anything LTE 1 km2.
+# Use calc'ed by IUCN b/c reported often zero.
+temp <- data.frame(PA.IVI$GIS_AREA, PA.IVI$REP_AREA) %>% View()
+rm(temp)
+
+PA.IVI.1km <- PA.IVI %>% filter(GIS_AREA >= 1) #61197
+PA.IVInoass.1km <- PA.IVInoass %>% filter(GIS_AREA >= 1) #62686
+
+rm(PA.IVI, PA.IVInoass)
+
+
+
+
+
+
+#### IDs ######################################################
+
+## Assign unique ID's for names (even though some may get lost if overlap)
 
 ## Drop unused levels
-PA.IIV.terr.1km$MARINE <- droplevels(PA.IIV.terr.1km$MARINE)
-PA.IIV.terr.1km$STATUS <- droplevels(PA.IIV.terr.1km$STATUS)
-PA.IIV.terr.1km$DESIG_ENG <- droplevels(PA.IIV.terr.1km$DESIG_ENG)
-PA.IIV.terr.1km$NAME <- droplevels(PA.IIV.terr.1km$NAME)
+PA.IVI.1km$STATUS <- droplevels(PA.IVI.1km$STATUS)
+PA.IVI.1km$DESIG_ENG <- droplevels(PA.IVI.1km$DESIG_ENG)
+PA.IVI.1km$NAME <- droplevels(PA.IVI.1km$NAME)
 
-PA.IV.terr.1km$MARINE <- droplevels(PA.IV.terr.1km$MARINE)
-PA.IV.terr.1km$STATUS <- droplevels(PA.IV.terr.1km$STATUS)
-PA.IV.terr.1km$DESIG_ENG <- droplevels(PA.IV.terr.1km$DESIG_ENG)
-PA.IV.terr.1km$NAME <- droplevels(PA.IV.terr.1km$NAME)
-
-PA.IVI.terr.1km$MARINE <- droplevels(PA.IVI.terr.1km$MARINE)
-PA.IVI.terr.1km$STATUS <- droplevels(PA.IVI.terr.1km$STATUS)
-PA.IVI.terr.1km$DESIG_ENG <- droplevels(PA.IVI.terr.1km$DESIG_ENG)
-PA.IVI.terr.1km$NAME <- droplevels(PA.IVI.terr.1km$NAME)
+PA.IVInoass.1km$STATUS <- droplevels(PA.IVInoass.1km$STATUS)
+PA.IVInoass.1km$DESIG_ENG <- droplevels(PA.IVInoass.1km$DESIG_ENG)
+PA.IVInoass.1km$NAME <- droplevels(PA.IVInoass.1km$NAME)
 
 
-## Retain only terrestrial based on desig and spot check at https://protectedplanet.net.
-# Create look-up table for designations to be dropped (with fuller list (PA.IVI.terr.1km))
-# IIV.levels <- as.data.frame(cbind(row_number(levels(PA.IIV.terr.1km$DESIG_ENG)),
-#                                   levels(PA.IIV.terr.1km$DESIG_ENG)))
-# IV.levels <- as.data.frame(cbind(row_number(levels(PA.IV.terr.1km$DESIG_ENG)),
-#                                  levels(PA.IV.terr.1km$DESIG_ENG)))
-# IVI.levels <- as.data.frame(cbind(row_number(levels(PA.IVI.terr.1km$DESIG_ENG)),
-#                                   levels(PA.IVI.terr.1km$DESIG_ENG)))
-# # Combine all into one table: has desig names and corresponding level nums.
-# desigs <- list(IIV.levels, IV.levels, IVI.levels) %>%
-#   reduce(full_join, by = "V2") %>%
-#   dplyr::select(V2, V1.x, V1.y, V1)
-# 
-# desigs <- desigs %>% modify_at(c(2, 3, 4), as.character) %>%
-#   modify_at(c(2,3,4), as.integer)
-# colnames(desigs) <- c("names", "IIV.nums", "IV.nums", "IVI.nums")
-# # write.csv(desigs, "desigs.to.drop.csv")
 
-# Then I tested with...
-# PA.IIV.terr.1km %>%
-#   filter(DESIG_ENG == levels(DESIG_ENG)[492])
-# ... and filled-in csv.
+## Create ID variable & look-up tables.
+# Use row number instead of PA name b/c some have same name
+PA.IVI.1km <- PA.IVI.1km %>%
+  mutate(ID = row_number()) %>%
+  dplyr::select(ID, everything())
+PA.IVInoass.1km <- PA.IVInoass.1km %>%
+  mutate(ID = row_number()) %>%
+  dplyr::select(ID, everything())
 
-## Load look-up table (created above) for removing unwanted designations.
-# N.b., each layer (I-IV, I-V, I-VI) has different factor level asso with desigs.
-desigs <- read.csv("desigs.to.drop_COMPLETE.csv")
-desigs$drop <- as.character(desigs$drop)
-desigs$drop[desigs$drop == ""] <- "N"
-desigs$drop[desigs$drop == "x"] <- "Y"
-desigs %>% count(drop)
+lu.PA.IVI.1km <- data.frame(PA.IVI.1km$ID, PA.IVI.1km$NAME)
+lu.PA.IVInoass.1km <- data.frame(PA.IVInoass.1km$ID, PA.IVInoass.1km$NAME)
 
-# Create mini filter for each, with asso levels of desigs to be dropped
-drops.IIV <- desigs %>% filter(drop == "Y") %>% dplyr::select(IIV.nums)
-drops.IV <- desigs %>% filter(drop == "Y") %>% dplyr::select(IV.nums)
-drops.IVI <- desigs %>% filter(drop == "Y") %>% dplyr::select(IVI.nums)
-
-# Filter based on desigs to be dropped
-PA.IIV.terr.1km <- PA.IIV.terr.1km %>%
-  filter(! as.integer(PA.IIV.terr.1km$DESIG_ENG) %in% drops.IIV$IIV.nums) #36480
-PA.IV.terr.1km <- PA.IV.terr.1km %>%
-  filter(! as.integer(PA.IV.terr.1km$DESIG_ENG) %in% drops.IV$IV.nums) #53755
-PA.IVI.terr.1km <- PA.IVI.terr.1km %>%
-  filter(! as.integer(PA.IVI.terr.1km$DESIG_ENG) %in% drops.IVI$IVI.nums) #57167
+write.csv(lu.PA.IVI.1km,
+          paste0(out.dir,"lu.PA.IVI.1km.csv"),
+          row.names = FALSE)
+write.csv(lu.PA.IVInoass.1km,
+          paste0(out.dir,"lu.PA.IVInoass.1km.csv"),
+          row.names = FALSE)
 
 
-## Save JIC
-st_write(PA.IIV.terr.1km, "WDPA_Apr2019-shapefile/PA.IIV.terr.1km.shp")
-st_write(PA.IV.terr.1km, "WDPA_Apr2019-shapefile/PA.IV.terr.1km.shp")
-st_write(PA.IVI.terr.1km, "WDPA_Apr2019-shapefile/PA.IVI.terr.1km.shp")
+
 
