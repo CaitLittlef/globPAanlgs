@@ -1,7 +1,21 @@
+#####################
+#### RASTERIZING ####
+#####################
+
+## Load raster template
+# ecoregion template
+ecoreg.r <- raster(paste0(data.dir,"ecoregions/ecoregion raster.tif"))
+plot(ecoreg.r)
+
+
+
 #### OVERLAPS? ######################################################
 ## Before fasterizing, how big of an issue will overlaps be?
-# Want terrestrial PA ID to trump, for example, wild & scenic rivers.
-# How extensive is overlap problem?
+# I can specify the order of rasterization.
+# So can I put biggest PA on top, so that they'll eat up small inclusions?
+# For example, any wilderness or wild/scenic river within an NP will be the NP.
+# I could set IDs based on PA size and then select max in fasterize...
+
 
 ## Look at Redwoods zone (exclude spot in MN)
 redwood <- PA.IVInoass.1km %>%
@@ -22,78 +36,70 @@ plot(st_geometry(redwood),
      col = sf.colors(nrow(redwood)))
 
 
-
-## I can specify the order of rasterization.
-# So can I put biggest PA on top, so that they'll eat up small inclusions.
-# For example, any wilderness or wild/scenic river within an NP will be the NP. 
-
 ## Try fasterizing, retaining ID, default fun (last); see how many dropped
-redwoods.r <- fasterize(redwood, ecoreg.r, field = "ID")
-length(unique(getValues(redwoods.r))) # 12  unique IDs, which means some dropped.
-# NA, 42670 40691 45847 41172 40952 40951 42617 51015 44402 51719 44411
+# redwoods.r <- fasterize(redwood, ecoreg.r, field = "ID")
+# length(unique(getValues(redwoods.r))) # 8  unique IDs
+# # NA 57281 52178 55146 37805 50794 46733 42538
+# # ^ 8 IDs relative to 19 observations means some got dropped (overlap)
 
-redwoods.r <- fasterize(redwood, ecoreg.r, field = "ID", fun = "sum")
-length(unique(getValues(redwoods.r))) # 13  unique IDs, which means some dropped.
-# NA, 83361 40691 45847 41172 81863 81643 81642 42617 51015 44402 51719 44411
-# 83361, 81863, 81643, 81642 new; 42670, 40952, 40951 dropped
-# ^ Those new ones are just added together IDs. So sum won't work.
+redwoods.r <- fasterize(redwood, ecoreg.r, field = "ID", fun = "max")
+length(unique(getValues(redwoods.r))) # 8  unique IDs
+# NA 57281 52178 55146 37805 50794 46733 42538
+# ^ Those unique IDs match the ones with last; i.e., order in which polygons drawn?
+# Prairie Creek Redwoods SP (49094) is contained by NP (57281).
+# So former gets dropped. Prove with summation approach below.
+
+# redwoods.r <- fasterize(redwood, ecoreg.r, field = "ID", fun = "sum")
+# length(unique(getValues(redwoods.r))) # 11  unique IDs
+# # NA 105242  57281  52178 102179 106375  55146  37805  50794  46733  42538
+# # ^ These are just dded together if overlap.
+# 49094 + 57281 # 106375, which is Prairie Creek + Redwoods
 
 
 
-################################################################
-## Load data
-PA.IIV <- st_read(dsn = paste0(data.dir,"WDPA_Apr2019-shapefile/PA.IIV.terr.1km.shp"))
-PA.IV <- st_read(dsn = paste0(data.dir,"WDPA_Apr2019-shapefile/PA.IV.terr.1km.shp"))
-PA.IVI <- st_read(dsn = paste0(data.dir,"WDPA_Apr2019-shapefile/PA.IVI.terr.1km.shp"))
 
+#### TEMPLATE ############################################################
 
-## Load raster template 
-clim.r <- raster("def.1961.1990.climo.tif")
-template.r <- raster(paste0(data.dir,"landcover.2007.4km.ea.tif"))
-# extent(clim.r)
-# crs(clim.r)
-# res(clim.r)
-extent(template.r)
-crs(template.r)
-res(template.r)
+## Create higher res raster for PA conversion, based on ecoreg
+# Will want to retain  pixels with at least 75% PA
+extent(ecoreg.r)
+crs(ecoreg.r)
+res(ecoreg.r) # 0.04166667. Want pixels 1/4 size of these pixels.
 
-## Create higher res raster for PA conversion.
-# (Will want to retain 4km pixels with at least 75% PA)
-ref.ras <- raster(xmn = -16940774, xmx = 16939226 ,
-                  ymn = -8479671, ymx = 8396329,
-                  resolution = 2000, # 1/4 size of template raster
-                  crs = "+proj=eck4 +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +units=m +no_defs", 
-                  vals = 1)
+ref.ras <- raster(extent(ecoreg.r),
+                  res = res(ecoreg.r)/2, # each side new pixel is half original
+                  crs=crs(ecoreg.r),
+                  vals =1)
 
 crs <- paste0(crs(ref.ras))
 
-################################################################
-## Prep polygons
+
+
+#### PREP POLYS ############################################################
+
 # Fasterize needs sf. (use st_sf() if layer is sfc_MULTIPOLYGON)
-class(PA.IIV)
-class(PA.IV) 
-class(PA.IVI) 
+class(PA.IVI.1km) 
+class(PA.IVInoass.1km) 
+
 # Set crs to match raster template
-st_crs(PA.IIV)
-st_crs(PA.IV) 
-st_crs(PA.IVI) 
-PA.IIV.t <- st_transform(PA.IIV, crs) ; st_crs(PA.IIV)
-PA.IV.t <- st_transform(PA.IV, crs) ; st_crs(PA.IV) 
-PA.IVI.t <- st_transform(PA.IVI, crs) ; st_crs(PA.IVI) 
+PA.IVI.1km <- st_transform(PA.IVI.1km, crs); st_crs(PA.IVI.1km)
+PA.IVInoass.1km <- st_transform(PA.IVInoass.1km, crs); st_crs(PA.IVInoass.1km)
 
 
-############################################################
-## Rasterize with fasterize. Field default is setting all polys to 1.
-# Define function else seems only 1st of overlap (even if not complete) gets kept.
-# "any" keeps any spot with a polygon; "sum" adds.
+
+#### RASTERIZE ############################################################
+
+## Rasterize with fasterize. Specify ID as field to retain. 
 # Background default is NA.
-PA.IIV.r <- fasterize(PA.IIV.t, raster = ref.ras, fun = "any")
-PA.IV.r <- fasterize(PA.IV.t, raster = ref.ras, fun = "any")
-PA.IVI.r <- fasterize(PA.IVI.t, raster = ref.ras, fun = "any")
+PA.IVI.r <- fasterize(PA.IVI.1km, raster = ref.ras, field = "ID", fun = "max")
+PA.IVInoass.r <- fasterize(PA.IVInoass.1km, raster = ref.ras, field = "ID", fun = "max")
 
-par(mfrow=c(1,3)) # Look around Yellowstone-Grand Teton
-plot(PA.IIV.r, xlim=c(-9220000,-9040000), ylim=c(5350000,5590000))
-plot(PA.IV.r, xlim=c(-9220000,-9040000), ylim=c(5350000,5590000))
+#### START HERE!!!!
+
+
+par(mfrow=c(1,2)) # Look around Yellowstone-Grand Teton
+plot(PA.IVI.r, xlim=c(-9220000,-9040000), ylim=c(5350000,5590000))
+plot(PA.IVInoass.r, xlim=c(-9220000,-9040000), ylim=c(5350000,5590000))
 plot(PA.IVI.r, xlim=c(-9220000,-9040000), ylim=c(5350000,5590000))
 par(mfrow=c(1,1))
 
