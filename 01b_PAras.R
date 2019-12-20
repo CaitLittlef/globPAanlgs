@@ -1,7 +1,43 @@
-currentDate <- Sys.Date()
-wd <- setwd("D:/Shared/BackedUp/Caitlin/GlobalConnect") 
+#### OVERLAPS? ######################################################
+## Before fasterizing, how big of an issue will overlaps be?
+# Want terrestrial PA ID to trump, for example, wild & scenic rivers.
+# How extensive is overlap problem?
 
-## Rasterize cleaned PA shapefile
+## Look at Redwoods zone (exclude spot in MN)
+redwood <- PA.IVInoass.1km %>%
+  filter(., grepl("Redwood", NAME)) %>%
+  filter(!NAME == "WRP_Redwood, MN (27127)") # 20 obs
+bbox <- st_bbox(redwood)
+# -124.20333   37.00931 -122.03447   41.84049
+# Make smaller bbox
+df <- data.frame(lon=c(-124, -124, -123, -123),
+                 # lat=c(39, 41, 41, 39))
+                 lat=c(40, 40.5, 40.5, 40))
+# Need to close it: 1st & last pts must be identical
+df <- rbind(df, df[1,])
+bbox <- st_bbox(st_sf(st_sfc(st_polygon(list(as.matrix(df)))), crs = st_crs(redwood)))
+
+plot(st_geometry(redwood),
+     xlim=c(bbox[1], bbox[3]), ylim=c(bbox[2], bbox[4]),
+     col = sf.colors(nrow(redwood)))
+
+
+
+## I can specify the order of rasterization.
+# So can I put biggest PA on top, so that they'll eat up small inclusions.
+# For example, any wilderness or wild/scenic river within an NP will be the NP. 
+
+## Try fasterizing, retaining ID, default fun (last); see how many dropped
+redwoods.r <- fasterize(redwood, ecoreg.r, field = "ID")
+length(unique(getValues(redwoods.r))) # 12  unique IDs, which means some dropped.
+# NA, 42670 40691 45847 41172 40952 40951 42617 51015 44402 51719 44411
+
+redwoods.r <- fasterize(redwood, ecoreg.r, field = "ID", fun = "sum")
+length(unique(getValues(redwoods.r))) # 13  unique IDs, which means some dropped.
+# NA, 83361 40691 45847 41172 81863 81643 81642 42617 51015 44402 51719 44411
+# 83361, 81863, 81643, 81642 new; 42670, 40952, 40951 dropped
+# ^ Those new ones are just added together IDs. So sum won't work.
+
 
 
 ################################################################
