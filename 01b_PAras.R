@@ -10,6 +10,20 @@
 # For example, any wilderness or wild/scenic river within an NP will be the NP.
 # I could set IDs based on PA size and then select max in fasterize...
 
+## Look at Greater Yellowstone zone
+GYE <- PA.IVInoass.1km %>%
+  filter(., grepl("Yellowstone|Teton|Absaroka|Washakie", NAME)) %>%
+  filter(GIS_AREA > 30) # nix small sites elsewhere 
+plot(st_geometry(GYE))
+(gye.bbox <- st_bbox(GYE))
+# Make bigge bbox
+df <- data.frame(lon=c(-112, -112, -109, -109),
+                 lat=c(43.5, 45.5, 43.5, 45.5))
+# Need to close it: 1st & last pts must be identical
+df <- rbind(df, df[1,])
+gye.bbox <- st_bbox(st_sf(st_sfc(st_polygon(list(as.matrix(df)))), crs = st_crs(redwood)))
+
+
 
 ## Look at Redwoods zone (exclude spot in MN)
 redwood <- PA.IVInoass.1km %>%
@@ -28,6 +42,8 @@ bbox <- st_bbox(st_sf(st_sfc(st_polygon(list(as.matrix(df)))), crs = st_crs(redw
 plot(st_geometry(redwood),
      xlim=c(bbox[1], bbox[3]), ylim=c(bbox[2], bbox[4]),
      col = sf.colors(nrow(redwood)))
+
+
 
 
 
@@ -134,10 +150,10 @@ print(paste0("Done aggregating"))
 print(Sys.time() - start)
 
 ## Retain only pixels (0.04166667x0.04166667) that have at least 75% area in PA.
-# Set all values < 3 to NA; retain all GTE 3 as 1
-temp.PA.IVI.r.agg[temp.PA.IVI.r.agg < 3] <- NA
+# Set all values < 3 to NA (or zero for math); retain all GTE 3 as 1
+temp.PA.IVI.r.agg[temp.PA.IVI.r.agg < 3] <- 0
 temp.PA.IVI.r.agg[temp.PA.IVI.r.agg >= 3] <- 1
-temp.PA.IVInoass.r.agg[temp.PA.IVInoass.r.agg < 3] <- NA
+temp.PA.IVInoass.r.agg[temp.PA.IVInoass.r.agg < 3] <- 0
 temp.PA.IVInoass.r.agg[temp.PA.IVInoass.r.agg >= 3] <- 1
 
 
@@ -152,90 +168,82 @@ print(paste0("Done aggregating"))
 print(Sys.time() - start) 
 
 plot(PA.IVI.r.agg, xlim=c(bbox[1], bbox[3]), ylim=c(bbox[2], bbox[4]))
-zoom(PA.IVI.r.agg, xlim=c(bbox[1], bbox[3]), ylim=c(bbox[2], bbox[4]))
 plot(PA.IVInoass.r.agg, xlim=c(bbox[1], bbox[3]), ylim=c(bbox[2], bbox[4]))
 
 
 
-## Raster math and only retain the ID's PAs that coincide w/ an "in" pixel.
-# Save for comparisons
-PA.IIV.r.agg.orig <- PA.IIV.r.agg
-PA.IV.r.agg.orig <- PA.IV.r.agg
-PA.IVI.r.agg.orig <- PA.IVI.r.agg
+## Overlays rasters and retain the ID's PAs that coincide w/ an "in" pixel.
+# "In" pixels are 1, not NA.
+PA.IVI <- overlay(PA.IVI.r.agg, temp.PA.IVI.r.agg,
+                  fun=function(r1, r1){return(r1*r2)})
+# Alt: just use PA=1 raster as a mask
+PA.IVI <- mask(PA.IVI.r.agg, temp.PA.IVI.r.agg)
+PA.IVInoass <- mask(PA.IVInoass.r.agg, temp.PA.IVInoass.r.agg)
+
+plot(PA.IVI, xlim=c(bbox[1], bbox[3]), ylim=c(bbox[2], bbox[4]))
+plot(PA.IVInoass, xlim=c(bbox[1], bbox[3]), ylim=c(bbox[2], bbox[4]))
 
 
 
-## DO NOT RESAMPLE TO TEMPLATE.R ELSE COARSEN ##
 
-## Retain only pixels that don't have template val 17 (WATER).
-# Could overlay, e.g....
-# park.85.2050.r <- overlay(park.MHHW.r, slr85.r, low85.r,
-#                           fun=function(r1, r2, r3){return(r1*r2*r3)})
-# But creating mask with clim = 17 <- NA leaves less to process.
-mask <- template.r
-mask[mask == 17] <- NA # 17 is water in template.
-PA.IIV.r.fin <- mask(PA.IIV.r.agg, mask)
-PA.IV.r.fin <- mask(PA.IV.r.agg, mask)
-PA.IVI.r.fin <- mask(PA.IVI.r.agg, mask)
-
-# Alt: Set non-zero values to 1, all non-template = 0. 
-mask01 <- template.r
-mask01[mask01 == 17] <- 0
-mask01[! mask01 == 0] <- 1
-# par(mfrow=c(1,1))
-# plot(mask01)
-# par(mfrow=c(1,1)) ; plot(mask01)
-PA.IIV.r.overlay <- overlay(PA.IIV.r.agg, mask01,
-                        fun=function(r1, r2){return(r1*r2)})
-PA.IV.r.overlay <- overlay(PA.IV.r.agg, mask01,
-                       fun=function(r1, r2){return(r1*r2)})
-PA.IVI.r.overlay <- overlay(PA.IVI.r.agg, mask01,
-                        fun=function(r1, r2){return(r1*r2)})
-
-
-#########################################################
-## Admire. Yellowstone - Grand Teton
-par(mfrow=c(1,3))
-plot(PA.IIV.r.fin, xlim=c(-9220000,-9040000), ylim=c(5350000,5590000))
-plot(PA.IV.r.fin, xlim=c(-9220000,-9040000), ylim=c(5350000,5590000))
-plot(PA.IVI.r.fin, xlim=c(-9220000,-9040000), ylim=c(5350000,5590000))
-par(mfrow=c(1,1))
-
-## Admire. Redwoods
-par(mfrow=c(1,4))
-plot(PA.IIV.r.fin, xlim=c(-10463223,-10425092), ylim=c(5130348,5214084))
-title("cat I-IV")
-plot(PA.IV.r.fin, xlim=c(-10463223,-10425092), ylim=c(5130348,5214084))
-title("cat I-V")
-plot(PA.IVI.r.fin, xlim=c(-10463223,-10425092), ylim=c(5130348,5214084))
-title("cat I-VI")
-plot(st_geometry(redwood), xlim=c(-10463223,-10425092), ylim=c(5130348,5214084), col = "green")
-title("orig shp")
-par(mfrow=c(1,1))
+#### CHECK ####################################################
+par(mfrow=c(1,2))
+plot(PA.IVI)
+plot(PA.IVInoass)
+plot(PA.IVI, xlim=c(bbox[1], bbox[3]), ylim=c(bbox[2], bbox[4]))
+plot(PA.IVInoass, xlim=c(bbox[1], bbox[3]), ylim=c(bbox[2], bbox[4]))
 
 ## Compare pre and post aggregation and mask
 par(mfrow=c(2,3))
-plot(st_geometry(redwoodish), xlim=c(-10463223,-10425092), ylim=c(5130348,5214084), col = "green")
-title("orig shp")
-plot(PA.IV.r, xlim=c(-10463223,-10425092), ylim=c(5130348,5214084))
-title("pre-agg")
-plot(PA.IV.r.agg.orig, xlim=c(-10463223,-10425092), ylim=c(5130348,5214084))
-title("agg'ed")
-plot(PA.IV.r.agg, xlim=c(-10463223,-10425092), ylim=c(5130348,5214084))
-title("agg'ed; keep 75%")
-plot(PA.IV.r.fin, xlim=c(-10463223,-10425092), ylim=c(5130348,5214084))
-title("agg'ed; 75%; masked")
-plot(PA.IV.r.overlay, xlim=c(-10463223,-10425092), ylim=c(5130348,5214084))
-title("agg'ed; 75%; overlay")
+plot(st_geometry(GYE),
+     xlim=c(gye.bbox[1], gye.bbox[3]),
+     ylim=c(gye.bbox[2], gye.bbox[4]),
+     col = sf.colors(nrow(GYE)))
+title("orig shps (select)")
+plot(temp.PA.IVI.r,
+     xlim=c(gye.bbox[1], gye.bbox[3]),
+     ylim=c(gye.bbox[2], gye.bbox[4]),
+     col = "green")
+title("pre-agg 75% PA template")
+plot(temp.PA.IVI.r.agg,
+     xlim=c(gye.bbox[1], gye.bbox[3]),
+     ylim=c(gye.bbox[2], gye.bbox[4]),
+     col = "green")
+title("agg'ed 75% PA template")
+plot(PA.IVI.r,
+     xlim=c(gye.bbox[1], gye.bbox[3]),
+     ylim=c(gye.bbox[2], gye.bbox[4]))
+title("pre-agg ID'ed")
+plot(PA.IVI.r.agg,
+     xlim=c(gye.bbox[1], gye.bbox[3]),
+     ylim=c(gye.bbox[2], gye.bbox[4]))
+title("agg'ed ID'ed")
+plot(PA.IVI,
+     xlim=c(gye.bbox[1], gye.bbox[3]),
+     ylim=c(gye.bbox[2], gye.bbox[4]))
+title("agg'ed ID'ed masked to 75% PA")
 par(mfrow=c(1,1))
 
 
+## Check to ensure different areas have different values
+plot(PA.IVI,
+     xlim=c(gye.bbox[1], gye.bbox[3]),
+     ylim=c(gye.bbox[2], gye.bbox[4]),
+     col=rainbow(20))
+# zoom(PA.IVI,
+#      xlim=c(gye.bbox[1], gye.bbox[3]),
+#      ylim=c(gye.bbox[2], gye.bbox[4]))
+click(PA.IVI,
+     xlim=c(gye.bbox[1], gye.bbox[3]),
+     ylim=c(gye.bbox[2], gye.bbox[4]))
+
+
+
+
+#### SAVE #############################################################3
 # Write
-writeRaster(PA.IIV.r.fin, paste0(out.dir,"PA.IIV.r.GTE75perc_",currentDate,".tif"))
-writeRaster(PA.IV.r.fin, paste0(out.dir,"PA.IV.r.GTE75perc_",currentDate,".tif"))
-writeRaster(PA.IVI.r.fin, paste0(out.dir,"PA.IVI.r.GTE75perc_",currentDate,".tif"))
-
-
+writeRaster(PA.IVI, paste0(out.dir,"PA.IVI.r.GTE75perc_",currentDate,".tif"))
+writeRaster(PA.IVInoass, paste0(out.dir,"PA.IVInoass.r.GTE75perc_",currentDate,".tif"))
 
 
 
