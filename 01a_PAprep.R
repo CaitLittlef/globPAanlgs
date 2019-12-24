@@ -85,6 +85,12 @@ PA.IVInoass.1km <- PA.IVInoass.1km %>%
   mutate(ID = row_number()) %>%
   dplyr::select(ID, everything())
 
+## Save
+st_write(PA.IVI.1km, paste0(out.dir,"PA.IVI.1km_",currentDate,".shp"))
+st_write(PA.IVInoass.1km, paste0(out.dir,"PA.IVInoass.1km_",currentDate,".shp"))
+
+
+## Create look-up for IDs
 lu.PA.IVI.1km <- PA.IVI.1km %>% st_drop_geometry()
 lu.PA.IVInoass.1km <- PA.IVInoass.1km %>% st_drop_geometry()
 
