@@ -1,0 +1,33 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1576858289508.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "B3A527A4",
+    "lastKnownWriteTime" : 2481042943426913650,
+    "last_content_update" : 1576858289508,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "cacheKey" : "79A9208",
+        "caption" : "redwood",
+        "contentUrl" : "grid_resource/gridviewer.html?env=&obj=redwood&cache_key=79A9208",
+        "displayedObservations" : "19",
+        "environment" : "",
+        "expression" : "redwood",
+        "object" : "redwood",
+        "preview" : "0",
+        "totalObservations" : "19",
+        "variables" : "12"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 7,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_dataframe"
+}

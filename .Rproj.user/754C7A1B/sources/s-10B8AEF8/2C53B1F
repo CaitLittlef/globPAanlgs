@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1576851679537.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "2C53B1F",
+    "lastKnownWriteTime" : 1577187082,
+    "last_content_update" : 1577187082140,
+    "path" : "D:/Shared/BackedUp/Caitlin/GlobalPAs/globPAanlgs/01b_PAras.R",
+    "project_path" : "01b_PAras.R",
+    "properties" : {
+        "cursorPosition" : "188,63",
+        "scrollLine" : "184"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

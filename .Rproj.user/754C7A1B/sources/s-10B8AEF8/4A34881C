@@ -1,0 +1,26 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1576842988592.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "595182354",
+    "id" : "4A34881C",
+    "lastKnownWriteTime" : 1577120902,
+    "last_content_update" : 1577120902530,
+    "path" : "D:/Shared/BackedUp/Caitlin/GlobalPAs/globPAanlgs/01a_PAprep.R",
+    "project_path" : "01a_PAprep.R",
+    "properties" : {
+        "cursorPosition" : "96,0",
+        "docOutlineVisible" : "1",
+        "scrollLine" : "76"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

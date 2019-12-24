@@ -1,0 +1,33 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1577121574077.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "CE6B54A3",
+    "lastKnownWriteTime" : 2531906049332683555,
+    "last_content_update" : 1577121574077,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "cacheKey" : "F6E657D6",
+        "caption" : "lu.PA.IVI.1km",
+        "contentUrl" : "grid_resource/gridviewer.html?env=&obj=lu.PA.IVI.1km&cache_key=F6E657D6",
+        "displayedObservations" : 59379,
+        "environment" : "",
+        "expression" : "lu.PA.IVI.1km",
+        "object" : "lu.PA.IVI.1km",
+        "preview" : 0,
+        "totalObservations" : 59379,
+        "variables" : 11
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 9,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_dataframe"
+}
