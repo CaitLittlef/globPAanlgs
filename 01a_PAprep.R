@@ -85,8 +85,8 @@ PA.IVInoass.1km <- PA.IVInoass.1km %>%
   mutate(ID = row_number()) %>%
   dplyr::select(ID, everything())
 
-lu.PA.IVI.1km <- data.frame(PA.IVI.1km$ID, PA.IVI.1km$NAME)
-lu.PA.IVInoass.1km <- data.frame(PA.IVInoass.1km$ID, PA.IVInoass.1km$NAME)
+lu.PA.IVI.1km <- PA.IVI.1km %>% st_drop_geometry()
+lu.PA.IVInoass.1km <- PA.IVInoass.1km %>% st_drop_geometry()
 
 write.csv(lu.PA.IVI.1km,
           paste0(out.dir,"lu.PA.IVI.1km.csv"),
