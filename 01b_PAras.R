@@ -186,7 +186,7 @@ plot(PA.IVInoass, xlim=c(bbox[1], bbox[3]), ylim=c(bbox[2], bbox[4]))
 
 
 
-#### CHECK #################################################### 
+#### CHECK ####################################################
 par(mfrow=c(1,2))
 plot(PA.IVI)
 plot(PA.IVInoass)
