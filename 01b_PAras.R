@@ -75,7 +75,7 @@ plot(st_geometry(redwood),
 ## Create higher res raster for PA conversion, based on ecoreg
 # Load ecoregion raster template
 ecoreg.r <- raster(paste0(data.dir,"ecoregions/ecoregion raster.tif"))
-plot(ecoreg.r)
+# plot(ecoreg.r)
 
 
 # Will want to retain  pixels with at least 75% PA
@@ -89,7 +89,7 @@ ref.ras <- raster(extent(ecoreg.r),
                   vals =1)
 
 crs <- paste0(crs(ref.ras))
-rem(ecoreg.r)
+rm(ecoreg.r)
 
 
 
@@ -128,6 +128,12 @@ extent(PA.IVI.r) ; extent(PA.IVInoass.r) ; extent(ref.ras) #; extent(ecoreg.r)
 crs(PA.IVI.r) ; crs(PA.IVInoass.r); crs(ref.ras) #; crs(ecoreg.r)
 res(PA.IVI.r) ; res(PA.IVInoass.r); res(ref.ras) #; res(ecoreg.r)
 
+
+# What are areas?
+temp1 <- tapply(raster::area(PA.IVI.r), PA.IVI.r[], sum)   # returns area totals for each raster value
+sum(temp1)
+temp2 <- tapply(raster::area(PA.IVInoass.r), PA.IVInoass.r[], sum)   # returns area totals for each raster value
+sum(temp2)
 
 
 
