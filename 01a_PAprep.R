@@ -14,7 +14,8 @@ currentDate <- Sys.Date()
 # 3) parks that are 100% marine.
 # 3) Anything not in Solomon's ecoreg template
 
-
+## Ref: https://www.protectedplanet.net/c/wdpa-lookup-tables
+## Ref (more details on cats I-VI): https://portals.iucn.org/library/sites/library/files/documents/PAG-021.pdf
 
 
 #### LOAD ######################################################
